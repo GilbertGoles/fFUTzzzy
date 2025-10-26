@@ -7,11 +7,11 @@ import uuid
 import json
 import os
 import sys
-from typing import Dict, List, Any, Optional
 
-# Добавляем путь для импортов
+# Добавляем родительскую директорию в путь Python
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Теперь импортируем абсолютным путем
 from core.master_core import MasterCore
 
 logger = logging.getLogger(__name__)
