@@ -2,8 +2,17 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import threading
 import logging
+import time
+import uuid
+import json
+import os
+import sys
 from typing import Dict, List, Any, Optional
-from ..core.master_core import MasterCore
+
+# Добавляем путь для импортов
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from core.master_core import MasterCore
 
 logger = logging.getLogger(__name__)
 
@@ -210,7 +219,7 @@ class MainWindow:
         action_frame.pack(fill=tk.X, padx=5, pady=10)
         
         ttk.Button(action_frame, text="Start Scan", 
-                  command=self.start_scan, style="Accent.TButton").pack(pady=10)
+                  command=self.start_scan).pack(pady=10)
     
     def setup_findings_tab(self):
         """Вкладка просмотра находок"""
@@ -385,11 +394,9 @@ class MainWindow:
             while True:
                 try:
                     self.root.after(0, self.refresh_all_data)
-                    self.root.after(30000, self.refresh_all_data)  # Каждые 30 секунд
                 except Exception as e:
                     logger.error(f"Refresh error: {str(e)}")
-                self.root.update()
-                self.root.after(30000)  # Ждем 30 секунд
+                time.sleep(30)  # Ждем 30 секунд
         
         refresh_thread = threading.Thread(target=refresh_loop, daemon=True)
         refresh_thread.start()
@@ -644,16 +651,61 @@ class MainWindow:
             values = self.findings_tree.item(item)["values"]
             finding_id = values[0]
             
-            # Здесь должна быть реализация окна с деталями находки
-            # включая полный HTTP ответ и обнаруженные проблемы
-            messagebox.showinfo("Finding Details", 
-                              f"Detailed view for finding {finding_id}\n"
-                              f"URL: {values[1]}\n"
-                              f"Status: {values[2]}\n"
-                              f"Severity: {values[4]}")
+            # Создаем окно с деталями
+            details_window = tk.Toplevel(self.root)
+            details_window.title(f"Finding Details - {finding_id}")
+            details_window.geometry("800x600")
+            
+            # Основной фрейм
+            main_frame = ttk.Frame(details_window, padding="10")
+            main_frame.pack(fill=tk.BOTH, expand=True)
+            
+            # Информация о находке
+            info_frame = ttk.LabelFrame(main_frame, text="Finding Information", padding="10")
+            info_frame.pack(fill=tk.X, pady=5)
+            
+            ttk.Label(info_frame, text=f"URL: {values[1]}").pack(anchor=tk.W)
+            ttk.Label(info_frame, text=f"Status Code: {values[2]}").pack(anchor=tk.W)
+            ttk.Label(info_frame, text=f"Content Length: {values[3]}").pack(anchor=tk.W)
+            ttk.Label(info_frame, text=f"Severity: {values[4]}").pack(anchor=tk.W)
+            ttk.Label(info_frame, text=f"Checked: {values[5]}").pack(anchor=tk.W)
+            
+            # Детальный просмотр
+            details_frame = ttk.LabelFrame(main_frame, text="Raw Response", padding="10")
+            details_frame.pack(fill=tk.BOTH, expand=True, pady=5)
+            
+            details_text = tk.Text(details_frame, wrap=tk.WORD)
+            scrollbar = ttk.Scrollbar(details_frame, orient=tk.VERTICAL, command=details_text.yview)
+            details_text.configure(yscrollcommand=scrollbar.set)
+            
+            # Здесь можно добавить логику для получения полного ответа
+            details_text.insert(tk.END, "Full HTTP response would be displayed here...")
+            
+            details_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            
+            # Кнопки
+            button_frame = ttk.Frame(main_frame)
+            button_frame.pack(fill=tk.X, pady=10)
+            
+            ttk.Button(button_frame, text="Mark as Checked", 
+                      command=lambda: self.mark_finding_and_close(finding_id, details_window)).pack(side=tk.LEFT, padx=5)
+            ttk.Button(button_frame, text="Close", 
+                      command=details_window.destroy).pack(side=tk.RIGHT, padx=5)
             
         except Exception as e:
             logger.error(f"Error showing details: {str(e)}")
+            messagebox.showerror("Error", f"Failed to show details: {str(e)}")
+    
+    def mark_finding_and_close(self, finding_id: str, window: tk.Toplevel):
+        """Отмечает находку и закрывает окно"""
+        try:
+            self.master_core.mark_finding_checked(finding_id, True)
+            self.refresh_findings()
+            window.destroy()
+            messagebox.showinfo("Success", "Finding marked as checked")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to mark finding: {str(e)}")
     
     def select_all_workers(self):
         """Выбирает всех воркеров"""
@@ -696,6 +748,8 @@ class MainWindow:
     def run(self):
         """Запускает главный цикл"""
         try:
+            # Первоначальное обновление данных
+            self.refresh_all_data()
             self.root.mainloop()
         except KeyboardInterrupt:
             self.master_core.stop()
