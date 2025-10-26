@@ -3,8 +3,12 @@ import argparse
 import logging
 import sys
 import os
+
+# Добавляем текущую директорию в путь Python
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from core.master_core import MasterCore
-from gui.main_window import MainWindow
+from cli_controller import CLIController  # Будем использовать CLI версию сначала
 
 def setup_logging(level=logging.INFO):
     """Настройка логирования"""
@@ -26,6 +30,7 @@ def main():
     parser.add_argument('--log-level', default='INFO', 
                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR'],
                        help='Log level')
+    parser.add_argument('--cli', action='store_true', help='Use CLI interface instead of GUI')
     
     args = parser.parse_args()
     
@@ -48,12 +53,23 @@ def main():
         
         logger.info("Master core started successfully")
         
-        # Запускаем GUI
-        app = MainWindow(master_core)
-        logger.info("GUI started successfully")
-        
-        # Главный цикл
-        app.run()
+        if args.cli:
+            # Запускаем CLI интерфейс
+            logger.info("Starting CLI interface")
+            cli = CLIController(master_core)
+            cli.show_menu()
+        else:
+            # Пробуем запустить GUI
+            try:
+                from gui.main_window import MainWindow
+                logger.info("Starting GUI interface")
+                app = MainWindow(master_core)
+                app.run()
+            except ImportError as e:
+                logger.warning(f"GUI not available: {e}. Falling back to CLI.")
+                print("GUI not available, falling back to CLI interface.")
+                cli = CLIController(master_core)
+                cli.show_menu()
         
     except KeyboardInterrupt:
         logger.info("Master stopped by user")
