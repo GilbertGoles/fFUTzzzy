@@ -8,7 +8,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from core.master_core import MasterCore
-from cli_controller import CLIController  # Будем использовать CLI версию сначала
+from cli_controller import CLIController
 
 def setup_logging(level=logging.INFO):
     """Настройка логирования"""
