@@ -23,7 +23,7 @@ class MasterCore:
         # Available wordlists
         self.wordlists = {
             "common.txt": "/opt/wordlists/common.txt",
-            "directory-list.txt": "/opt/wordlists/directory-list.txt",
+            "directory-list.txt": "/opt/wordlists/directory-list.txt", 
             "api-wordlist.txt": "/opt/wordlists/api-wordlist.txt",
             "custom.txt": "/opt/wordlists/custom.txt"
         }
